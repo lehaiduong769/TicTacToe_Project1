@@ -1,5 +1,6 @@
 using Microsoft.VisualBasic.Devices;
 using Timer = System.Windows.Forms.Timer;
+using MENACElib;
 
 namespace tictactoe
 {
@@ -7,9 +8,11 @@ namespace tictactoe
     {
         Player currentPlayer; // calling the player class 
         List<Button> buttons; // creating a LIST or array of buttons
-        Random rand = new Random(); // importing the random number generator class
         int playerWins = 0; // set the player win integer to 0
         int computerWins = 0; // set the computer win integer to 0
+        string gameRecord = ""; //record of steps witten in file
+        List<byte> currentState = new(); // record of steps passed to AI's MENACE
+        MENACE AI;
 
         // below is the player class which has two value
         // X and O
@@ -23,19 +26,26 @@ namespace tictactoe
         {
             InitializeComponent();            
             resetGame();
+            AI = new();
+            AI.Download();
         }
 
         private void button10_Click(object sender, EventArgs e)
         {
-
+            // this function is linked with the reset button
+            // when the reset button is clicked then
+            // this function will run the reset game function
+            resetGame();
         }
         private void playerClick(object sender, EventArgs e)
         {
             var button = (Button)sender; // find which button was clicked
+            gameRecord += button.TabIndex - 2; //record button player clicked, button starting from 0 to 8
+            currentState.Add((byte)(button.TabIndex - 2));
             currentPlayer = Player.X; // set the player to X
             button.Text = currentPlayer.ToString(); // change the button text to player X
             button.Enabled = false; // disable the button
-            button.BackColor = System.Drawing.Color.Cyan; // change the player colour to Cyan
+            button.BackColor = System.Drawing.Color.WhiteSmoke; // change the player colour to Cyan
             buttons.Remove(button); //remove the button from the list buttons so the AI can't click it either
             Check(); // check if the player won
             AImoves.Start(); // start the AI timer
@@ -46,18 +56,10 @@ namespace tictactoe
             buttons = new List<Button> { button1, button2, button3, button4, button5, button6, button7, button9, button8 };
         }
 
-        private void restartGame(object sender, EventArgs e)
-        {
-            // this function is linked with the reset button
-            // when the reset button is clicked then
-            // this function will run the reset game function
-            resetGame();
-        }
-
         private void resetGame()
         {
             //check each of the button with a tag of play
-            foreach (Control X in this.Controls)
+            foreach (Control X in this.panel2.Controls)
             {
                 if (X is Button && X.Tag == "play")
                 {
@@ -66,7 +68,21 @@ namespace tictactoe
                     ((Button)X).BackColor = default(Color); // change the background colour to default button colors
                 }
             }
+            currentState = new();
+            gameRecord = "";
             loadbuttons(); // run the load buttons function so all the buttons are inserted back in the array
+        }
+
+        private void Record(string winner)
+        {
+            using (StreamWriter sw = File.AppendText(@"D:\VTC\8.Project 1\tictactoe\MENACElib\record.txt"))
+            {
+                sw.WriteLine($"{DateTime.Now},{gameRecord},{winner}");
+            }
+            using (StreamWriter sw = new(@"D:\VTC\8.Project 1\tictactoe\MENACElib\tempRecord.txt"))
+            {
+                sw.WriteLine($"{DateTime.Now},{gameRecord},{winner}");
+            }
         }
 
         private void Check()
@@ -85,9 +101,10 @@ namespace tictactoe
             {
                 // if any of the above conditions are met
                 AImoves.Stop(); //stop the timer
-                MessageBox.Show("Player Wins"); // show a message to the player
+                MessageBox.Show("Player WIN !!!"); // show a message to the player
                 playerWins++; // increase the player wins 
-                label1.Text = "Player Wins- " + playerWins; // update player label
+                butX.Text = Convert.ToString(playerWins); // update player label
+                Record("Player");
                 resetGame(); // run the reset game function
             }
             // below if statement is for when the AI wins the game
@@ -100,14 +117,20 @@ namespace tictactoe
             || button1.Text == "O" && button5.Text == "O" && button9.Text == "O"
             || button3.Text == "O" && button5.Text == "O" && button7.Text == "O")
             {
-
                 // if any of the conditions are met above then we will do the following
                 // this code will run when the AI wins the game
                 AImoves.Stop(); // stop the timer
-                MessageBox.Show("Computer Wins"); // show a message box to say computer won
+                MessageBox.Show("Computer WIN !!!"); // show a message box to say computer won
                 computerWins++; // increase the computer wins score number
-                label2.Text = "AI Wins- " + computerWins; // update the label 2 for computer wins
+                but0.Text = Convert.ToString(computerWins); // update the label 2 for computer wins
+                Record("Computer");
                 resetGame(); // run the reset game
+            }
+            else if (buttons.Count == 0)
+            {
+                MessageBox.Show("Draw !!!");
+                Record("-");    
+                resetGame();
             }
         }
 
@@ -118,20 +141,45 @@ namespace tictactoe
             // if the array is less than 0 it will stop playing
             if (buttons.Count > 0)
             {
-                int index = rand.Next(buttons.Count); // generate a random number within the number of buttons available
-                buttons[index].Enabled = false; // assign the number to the button
+                Button b = null;
+                AI.Download();
+                int k = AI.nextMove(new State(currentState));
+                try
+                {
+                    b = buttons.Find(x => x.TabIndex == (k + 2));
+                } catch {
+                    var i = new Random();
+                    b = buttons[i.Next(buttons.Count) - 1];
+                } 
+                b.Enabled = false; // assign the number to the button
                                                 // when the random number is generated then we will look into the list
                                                 // for what that number is we select that button
                                                 // for example if the number is 8
                                                 // then we select the 8th button in the list
 
                 currentPlayer = Player.O; // set the AI with O
-                buttons[index].Text = currentPlayer.ToString(); // show O on the button
-                buttons[index].BackColor = System.Drawing.Color.DarkSalmon; // change the background of the button dark salmon colour
-                buttons.RemoveAt(index); // remove that button from the list
+                gameRecord += b.TabIndex - 2; //record button AI clicked, starting from 0 to 8
+                currentState.Add((byte)(b.TabIndex - 2));
+                b.Text = currentPlayer.ToString(); // show O on the button
+                b.BackColor = System.Drawing.Color.DarkSalmon; // change the background of the button dark salmon colour
+                buttons.Remove(b); // remove that button from the list
                 Check(); // check if the AI won anything
                 AImoves.Stop(); // stop the AI timer
             }
+        }
+        private void butExit_Click(object sender, EventArgs e)
+        {
+            AI.Train();
+            AI.Upload();
+            this.Close();
+        }
+
+        private void button11_Click(object sender, EventArgs e)
+        {
+            this.Hide();
+            Menu menu = new Menu();
+            menu.Closed += (s, args) => this.Close();
+            menu.Show();
         }
     }
 }

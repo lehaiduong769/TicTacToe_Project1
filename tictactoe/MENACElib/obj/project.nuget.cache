@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "zn3INK6cbciZu8sUskmO93UNM5qRzkv4OdlbZO/ZBa9KTOA0nZIcgYfQtl0MP0fhD9khQgbHeaaPeJL/GISt5Q==",
+  "success": true,
+  "projectFilePath": "D:\\VTC\\8.Project 1\\tictactoe\\MENACElib\\MENACElib.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ADMIN\\.nuget\\packages\\newtonsoft.json\\13.0.1\\newtonsoft.json.13.0.1.nupkg.sha512"
+  ],
+  "logs": []
+}
